@@ -1,0 +1,4 @@
+[{<<"edate">>,
+  {git,"git@github.com:dweldon/edate.git",
+       {ref,"640718ee7fde7d5bac0c5d228d0a4acd8712f719"}},
+  0}].

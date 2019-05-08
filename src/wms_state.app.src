@@ -1,0 +1,14 @@
+{application, wms_state,
+ [{description, "State handling functions for WMS"},
+  {vsn, git},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, [wms_state]},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
