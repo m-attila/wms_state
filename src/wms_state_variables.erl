@@ -15,24 +15,9 @@
          build_transaction/7]).
 
 -include("wms_state.hrl").
+-include("wms_state_variable_callbacks.hrl").
 
 %% API
-
-%% =============================================================================
-%% Callbacks
-%% =============================================================================
--callback get_variable(Environment :: map(), Reference :: variable_reference()) ->
-  {ok, Value :: literal()} | {error, Reason :: term()}.
-
--callback set_variable(Environment :: map(),
-                       Reference :: variable_reference(),
-                       Value :: literal(),
-                       InTransaction :: boolean()) ->
-                        {ok, NewEnvironment :: map()} | {error, Reason :: term()}.
-
--callback transaction(StartEnvironment :: map(),
-                      Transaction :: transaction_fun()) ->
-                       {ok, map()} | {error, term()}.
 
 %% -----------------------------------------------------------------------------
 %% Eval variable reference
@@ -42,9 +27,9 @@
                Impl :: atom(), Environment :: map()) ->
                 {ok, literal()} | {error, term()}.
 eval_var({private, _} = Reference, Impl, Environment) ->
-  Impl:get_variable(Environment, Reference);
+  apply(Impl, get_variable, [Environment, Reference]);
 eval_var({global, _} = Reference, Impl, Environment) ->
-  Impl:get_variable(Environment, Reference);
+  apply(Impl, get_variable, [Environment, Reference]);
 eval_var({literal, Literal}, _, _) ->
   {ok, Literal};
 eval_var(Literal, _, _) ->
@@ -164,7 +149,7 @@ build_transaction(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destinati
         fun({{literal, _}, _}, E) ->
           E;
            ({Dest, Value}, E) ->
-             {ok, E1} = Impl:set_variable(E, Dest, Value, true),
+             {ok, E1} = apply(Impl, set_variable, [E, Dest, Value, true]),
              E1
         end,
         Environment, SetCommands),
@@ -174,11 +159,11 @@ build_transaction(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destinati
 -spec run_transaction(transaction_fun(), atom(), map()) ->
   {ok, map()} | {error, term()}.
 run_transaction(Transaction, Impl, StartEnvironment) ->
-  Impl:transaction(StartEnvironment, fun(Environment) ->
+  apply(Impl, transaction, [StartEnvironment, fun(Environment) ->
     try
       Transaction(Environment)
     catch error : {badmatch, R} ->
       R;
       _ : R1 ->
         {error, R1}
-    end end).
+    end end]).
