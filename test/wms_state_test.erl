@@ -11,13 +11,10 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--define(CHK(Exp, Literal, Op),
-  ?assertEqual(Exp,
-               wms_common:eval_operation(Literal, Op))).
+-define(CHK(Exp, Literal, Op), do_eval_operation(Exp, Literal, Op)).
 
 -define(CHK(Exp, Literal1, Op, Literal2),
-  ?assertEqual(Exp,
-               wms_common:eval_operation(Literal1, Op, Literal2))).
+  do_eval_operation(Exp, Literal1, Op, Literal2)).
 
 eval_op_test() ->
   test_eval_op_one_arg(),
@@ -257,3 +254,19 @@ test_eval_op_two_list() ->
        {'++', other}, 3),
   ?CHK({error, {{'++', tail}, {x, 3}}}, x, {'++', tail}, 3),
   ok.
+
+do_eval_operation(Exp, Literal, Op) ->
+  case Exp of
+    {error, _} ->
+      ?assertEqual(Exp, wms_state:eval_operation(Literal, Op));
+    _ ->
+      ?assertEqual({ok, Exp}, wms_state:eval_operation(Literal, Op))
+  end.
+
+do_eval_operation(Exp, Literal1, Op, Literal2) ->
+  case Exp of
+    {error, _} ->
+      ?assertEqual(Exp, wms_state:eval_operation(Literal1, Op, Literal2));
+    _ ->
+      ?assertEqual({ok, Exp}, wms_state:eval_operation(Literal1, Op, Literal2))
+  end.
