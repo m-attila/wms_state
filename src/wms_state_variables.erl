@@ -129,9 +129,18 @@ move_var(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destination, Impl,
 build_transaction(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destination,
                   Impl) ->
   fun(Environment) ->
-    {ok, SourceValue} = eval_var({SourceType, SLiteralOrID}, Impl, Environment),
-    {ok, OpArgValue} = eval_var({OpType, OpLiteralOrID}, Impl, Environment),
-    {ok, OperatorResult} = eval_operation(SourceValue, {Op, OpArgValue}),
+    {ok, SourceValue} = check_error(variable,
+                                    eval_var({SourceType, SLiteralOrID},
+                                             Impl, Environment),
+                                    Environment),
+    {ok, OpArgValue} = check_error(operator_arg,
+                                   eval_var({OpType, OpLiteralOrID},
+                                            Impl, Environment),
+                                   Environment),
+    {ok, OperatorResult} = check_error(operation,
+                                       eval_operation(SourceValue,
+                                                      {Op, OpArgValue}),
+                                       Environment),
 
     SetCommands =
       case OperatorResult of
@@ -167,3 +176,10 @@ run_transaction(Transaction, Impl, StartEnvironment) ->
       _ : R1 ->
         {error, R1}
     end end]).
+
+-spec check_error(term(), {ok, term()} | {error, term()}, map()) ->
+  {ok, term()} | {error, term()}.
+check_error(_, {ok, _} = Result, _) ->
+  Result;
+check_error(ErrorType, {error, Term}, Environment) ->
+  {error, {ErrorType, Term, Environment}}.

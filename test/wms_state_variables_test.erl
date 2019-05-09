@@ -17,14 +17,14 @@
 
 -define(CHK_VAR(Expected, Variable, Environment),
   ?assertEqual(Expected,
-               wms_state_variables:eval_var(
+               wms_state:eval_var(
                  Variable,
                  wms_state_variables_adapter, Environment))).
 
 -define(MOVE(Expected, Src, Dest, Env),
   begin
     put(result, wms_state:move_var(Src, Dest,
-                                             wms_state_variables_adapter, Env)),
+                                   wms_state_variables_adapter, Env)),
     ?assertMatch(Expected, get(result)),
 
     unpack(get(result))
@@ -135,7 +135,7 @@ transaction_error_test() ->
   VarP1 = {private, <<"VarP1">>},
 
   % move literal to private variable
-  ?MOVE({error, {not_found, {private, <<"no_var">>}}},
+  ?MOVE({error, {variable, {not_found, {private, <<"no_var">>}}, #{}}},
         {private, <<"no_var">>}, VarP1, #{}),
 
   try

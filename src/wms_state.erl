@@ -5,7 +5,8 @@
 %% API exports
 -export([eval_operation/3,
          eval_operation/2,
-         move_var/4]).
+         move_var/4,
+         eval_var/3]).
 
 %%====================================================================
 %% API functions
@@ -25,8 +26,16 @@ eval_operation(Literal, Operation) ->
   ok(wms_state_operator:eval_operation(Literal, Operation)).
 
 %% =============================================================================
-%% Move variable
+%% Variable handling
 %% =============================================================================
+
+-spec eval_var(variable_or_literal() | {literal, literal() | undefined},
+               WMSStateVariablesBehaviour :: atom(), Environment :: map()) ->
+                {ok, literal()} | {error, term()}.
+eval_var(ReferenceOrLiteral, WMSStateVariablesBehaviour, Environment) ->
+  wms_state_variables:eval_var(ReferenceOrLiteral,
+                               WMSStateVariablesBehaviour, Environment).
+
 -spec move_var(source() | {source(), term()}, destination(), atom(), map()) ->
   {ok, map()} | {error, term()}.
 move_var(Source, Destination, WMSStateVariablesBehaviour, Environment) ->
