@@ -14,7 +14,10 @@
 
 -export([get_variable/2,
          transaction/2,
-         set_variable/4]).
+         set_variable/4,
+         save_state/1,
+         drop_state/1,
+         load_state/1]).
 
 %% =============================================================================
 %% Callback implementation
@@ -46,4 +49,20 @@ set_variable(Environment, Reference, Value, _InTransaction) ->
 
 transaction(StartEnvironment, Transaction) ->
   Transaction(StartEnvironment).
+
+-spec save_state(State :: map()) ->
+  ok.
+save_state(_State) ->
+  ok.
+
+-spec drop_state(State :: map()) ->
+  ok.
+drop_state(_State) ->
+  ok.
+
+-spec load_state(InitialState :: map()) ->
+  not_found | map().
+load_state(_) ->
+  throw(not_implemented).
+
 

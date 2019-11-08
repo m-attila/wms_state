@@ -15,11 +15,14 @@
 %% -----------------------------------------------------------------------------
 %% Evaluate operations functions
 %% -----------------------------------------------------------------------------
+
+% két operandusú operátor kiértékelése literálon
 -spec eval_operation(term(), term(), term()) ->
   {ok, term()} | {error, term()}.
 eval_operation(Literal1, Operation, Literal2) ->
   ok(wms_state_operator:eval_operation(Literal1, Operation, Literal2)).
 
+% egy operandusú operátor kiértékelése literálon
 -spec eval_operation(term(), term()) ->
   {ok, term()} | {error, term()}.
 eval_operation(Literal, Operation) ->

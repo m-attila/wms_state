@@ -7,7 +7,7 @@
     stdlib
    ]},
   {env,[]},
-  {modules, [wms_state]},
+  {modules, [wms_state, wms_state_operator, wms_state_variables]},
 
   {licenses, ["Apache 2.0"]},
   {links, []}

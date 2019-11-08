@@ -8,6 +8,9 @@
 %%%-------------------------------------------------------------------
 -author("Attila Makra").
 
+-ifndef(__WMS_STATE_HRL).
+-define(__WMS_STATE_HRL, wms_state_hrl).
+
 -type identifier_name() :: binary().
 
 %% =============================================================================
@@ -25,3 +28,5 @@
 
 -type transaction_fun() :: fun((Environment :: map())->
   {ok, NewEnvironment :: map()} | {error, term()}).
+
+-endif.

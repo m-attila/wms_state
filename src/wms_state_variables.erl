@@ -23,8 +23,9 @@
 %% Eval variable reference
 %% -----------------------------------------------------------------------------
 
+% továbbhív a wms_state_variable_callbacks implementációba, ha nem literál
 -spec eval_var(variable_or_literal() | {literal, literal() | undefined},
-               Impl :: atom(), Environment :: map()) ->
+               Impl :: module(), Environment :: map()) ->
                 {ok, literal()} | {error, term()}.
 eval_var({private, _} = Reference, Impl, Environment) ->
   apply(Impl, get_variable, [Environment, Reference]);
@@ -58,6 +59,10 @@ eval_operation(Literal, {Operation, OpArgLiteral}) ->
   % operation with argument
   wms_state:eval_operation(Literal, Operation, OpArgLiteral).
 
+%% -----------------------------------------------------------------------------
+%% Move variable with operation
+%% -----------------------------------------------------------------------------
+
 -spec move_var(source() | {source(), term()}, destination(), atom(), map()) ->
   {ok, map()} | {error, term()}.
 move_var({{SType, SID}, Op}, Destination, Impl, Environment) ->
@@ -74,25 +79,32 @@ move_var(SLiteral, Destination, Impl, Environment) ->
   % move source literal
   move_var(literal, SLiteral, 'nop', Destination, Impl, Environment).
 
+%% -----------------------------------------------------------------------------
+%% move_var private implementation
+%% -----------------------------------------------------------------------------
+
 -spec move_var(SourceType :: private | global | literal,
                SLiteralOrID :: identifier_name() | term(),
                Op :: atom() | {Op :: atom(), OpArg :: variable_or_literal()},
                Destination :: variable_reference(),
-               Impl :: atom(),
+               Impl :: module(),
                Environment :: map()) ->
                 {ok, map()} | {error, term()}.
 move_var(SourceType, SLiteralOrID, {Op, {Type, OpArgID}}, Destination, Impl,
          Environment) ->
   % operator with variable reference argument
+  % operator example: {'+', {private, <<"VarP1">>}}
   move_var(SourceType, SLiteralOrID, Op, Type, OpArgID, Destination, Impl,
            Environment);
 move_var(SourceType, SLiteralOrID, {Op, OpArgLit}, Destination, Impl,
          Environment) ->
-  % operator with literal argument
+  % operator with literal argument.
+  % operator example: {'+', 12}
   move_var(SourceType, SLiteralOrID, Op, literal, OpArgLit, Destination, Impl,
            Environment);
 move_var(SourceType, SLiteralOrID, Op, Destination, Impl, Environment) ->
   % operator without argument
+  % operator example: '!'
   move_var(SourceType, SLiteralOrID, Op, literal, undefined, Destination, Impl,
            Environment).
 
@@ -102,7 +114,7 @@ move_var(SourceType, SLiteralOrID, Op, Destination, Impl, Environment) ->
                OpType :: private | global | literal,
                OpLiteralOrID :: identifier_name() | term() | undefined,
                Destination :: variable_reference(),
-               Impl :: atom(),
+               Impl :: module(),
                Environment :: map()) ->
                 {ok, map()} | {error, term()}.
 move_var(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destination, Impl,
@@ -117,26 +129,36 @@ move_var(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destination, Impl,
                               Impl),
   run_transaction(Transaction, Impl, StartEnvironment).
 
+%% -----------------------------------------------------------------------------
+%% Transaction handling for atomic variable modifications
+%% -----------------------------------------------------------------------------
+
 -spec build_transaction(SourceType :: private | global | literal,
                         SLiteralOrID :: identifier_name() | term(),
                         Op :: atom(),
                         OpType :: private | global | literal,
                         OpLiteralOrID :: identifier_name() | term() | undefined,
                         Destination :: variable_reference(),
-                        Impl :: atom()) ->
+                        Impl :: module()) ->
                          fun((map()) ->
                            {ok, map()}).
 build_transaction(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destination,
                   Impl) ->
+  % transaction fun which will be executed in transactional environment
+  % for example mnesia database
   fun(Environment) ->
+    % source value
     {ok, SourceValue} = check_error(variable,
                                     eval_var({SourceType, SLiteralOrID},
                                              Impl, Environment),
                                     Environment),
+    % operator argument valie
     {ok, OpArgValue} = check_error(operator_arg,
                                    eval_var({OpType, OpLiteralOrID},
                                             Impl, Environment),
                                    Environment),
+
+    % Source value which was modified by operator and its argument
     {ok, OperatorResult} = check_error(operation,
                                        eval_operation(SourceValue,
                                                       {Op, OpArgValue}),
@@ -145,27 +167,36 @@ build_transaction(SourceType, SLiteralOrID, Op, OpType, OpLiteralOrID, Destinati
     SetCommands =
       case OperatorResult of
         {Element, RestElements} when is_list(RestElements) ->
-          % list manipulation with two results
+          % list manipulations has  two results
+          % Element is the modified element of list. for example, removed
+          % RestElements are the all others elements in the list which
+          % remains.
+          % There is two operation:
+          %   - modify source with RestElementd
+          %   - write Element into Destination
           [{{SourceType, SLiteralOrID}, RestElements},
            {Destination, Element}];
         _ ->
-          % only one result
+          % the operation has only one result
           [{Destination, OperatorResult}]
       end,
 
+    % Execute SetCommands
     NewEnvironment =
       lists:foldl(
-        fun({{literal, _}, _}, E) ->
-          E;
-           ({Dest, Value}, E) ->
-             {ok, E1} = apply(Impl, set_variable, [E, Dest, Value, true]),
-             E1
+        fun
+          ({{literal, _}, _}, E) ->
+            % literal does not modify environment
+            E;
+          ({Dest, Value}, E) ->
+            {ok, E1} = apply(Impl, set_variable, [E, Dest, Value, true]),
+            E1
         end,
         Environment, SetCommands),
     {ok, NewEnvironment}
   end.
 
--spec run_transaction(transaction_fun(), atom(), map()) ->
+-spec run_transaction(transaction_fun(), module(), map()) ->
   {ok, map()} | {error, term()}.
 run_transaction(Transaction, Impl, StartEnvironment) ->
   apply(Impl, transaction, [StartEnvironment, fun(Environment) ->

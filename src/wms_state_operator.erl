@@ -73,6 +73,7 @@
 %% API functions
 %% =============================================================================
 
+% két operandusú operátor kiértékelése literálon
 -spec eval_operation(term(), term(), term()) ->
   term() | {error, term()}.
 eval_operation(Literal1, Operation, Literal2) ->
@@ -82,6 +83,8 @@ eval_operation(Literal1, Operation, Literal2) ->
     Fun ->
       Fun(Literal1, Operation, Literal2)
   end.
+
+% egy operandusú operátor kiértékelése literálon
 -spec eval_operation(term(), term()) ->
   term() | {error, term()}.
 eval_operation(Literal, Operation) ->
